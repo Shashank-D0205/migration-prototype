@@ -12,7 +12,19 @@ class _PlaylistMigrationScreenState extends State<PlaylistMigrationScreen> {
   List songs = [];
   bool isLoading = false;
 
-  Future<void> fetchSpotifyPlaylist() async {
+  Future<void> searchOnYouTube(String songName) async {
+    final response = await http.get(Uri.parse("http://your-server.com/api/youtube/search/$songName"));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      print("YouTube search result: $data"); // Replace with UI update logic
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to search YouTube", style: TextStyle(color: Colors.redAccent))),
+      );
+    }
+  }
+  Future<void> fetchSpotifyPlaylist() async  {
     String playlistUrl = _urlController.text.trim();
 
     if (!playlistUrl.contains("spotify.com/playlist/")) {
@@ -25,12 +37,18 @@ class _PlaylistMigrationScreenState extends State<PlaylistMigrationScreen> {
     setState(() => isLoading = true);
 
     String playlistId = playlistUrl.split("playlist/")[1].split("?")[0]; // Extract ID
-    String apiUrl = "https://api.spotify.com/v1/playlists/$playlistId/tracks";
+    String apiUrl = "https://api.spotify.com/v1/playlists/0x25YDxtGTOE1aNAkQExXK?si=PpUO3a8xQEyAjKACkK7plQ&pi=zIw3IuboTnubb/tracks"; // Direct Spotify API URL
 
-    String token = "YOUR_SPOTIFY_API_TOKEN"; // Temporary, backend should handle this
-    final response = await http.get(Uri.parse(apiUrl), headers: {
-      "Authorization": "Bearer $token",
-    });
+    // 🔹 Add your Spotify token here
+    String token = "BQDKv8HyyIqrlTyFcnut4bi7uy1yzGOMLegJWr_-Auvl3W8P12Sdcm39ZX70uCGVDw_VL3QNOXOLlJbq64TgyA6LfiStH9A5nlP1LOGfJLzyiYtb7ZemJtB5p9BwowKd4DhggaObkWI";
+
+    final response = await http.get(
+      Uri.parse(apiUrl),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -38,13 +56,22 @@ class _PlaylistMigrationScreenState extends State<PlaylistMigrationScreen> {
         songs = data["items"];
         isLoading = false;
       });
+
+      // 🔹 Call YouTube search for each song
+      for (var song in songs) {
+        String songName = song["track"]["name"];
+        searchOnYouTube(songName);
+      }
+
     } else {
+      print("Error: ${response.body}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to fetch playlist", style: TextStyle(color: Colors.redAccent))),
       );
       setState(() => isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -99,3 +126,5 @@ class _PlaylistMigrationScreenState extends State<PlaylistMigrationScreen> {
     );
   }
 }
+
+
